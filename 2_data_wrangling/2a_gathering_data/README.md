@@ -1,6 +1,6 @@
 # 📥 Step 2a: Gathering Data
 
-The first part of data wrangling is gathering data from various sources. This notebook/file documents how to collect data from common sources used in real-world data analysis.
+The first part of data wrangling is gathering data from various sources. This notebook/file documents how to **import** data from common sources, **export** data into different formats, and **gather data via APIs and web scraping**.
 
 ---
 
@@ -8,18 +8,24 @@ The first part of data wrangling is gathering data from various sources. This no
 
 - Identify where the data is coming from
 - Load data into a usable format (mainly Pandas DataFrames)
+- Export/save data into different formats as needed
 - Document source, format, and any access requirements
 - Save a raw copy of the data before any modification (never overwrite raw data)
 
 ---
 
-## 📂 1. Reading from CSV / Text Files
+# 📂 Part 1: Importing Data from Various Sources
+
+## 1. CSV / Text Files
 
 ```python
 import pandas as pd
 
 # Basic read
 df = pd.read_csv('data.csv')
+
+# Reading a plain text file (e.g. tab-separated)
+df = pd.read_csv('data.txt', sep='\t')
 
 # Advanced / hidden parameters
 df = pd.read_csv(
@@ -40,13 +46,37 @@ df = pd.read_csv(
 
 ---
 
-## 📂 2. Reading JSON Data
+## 2. HTML
 
 ```python
-import pandas as pd
+# Read all <table> elements from a webpage or HTML string into a list of DataFrames
+df_list = pd.read_html('https://example.com/page')
+df = df_list[0]   # pick the relevant table
+```
+
+---
+
+## 3. Excel
+
+```python
+# Single sheet
+df = pd.read_excel('data.xlsx', sheet_name='Sheet1')
+
+# Multiple sheets -> dict of DataFrames
+all_sheets = pd.read_excel('data.xlsx', sheet_name=None)
+
+# Specific columns / skip rows
+df = pd.read_excel('data.xlsx', sheet_name='Sheet1', usecols='A:D', skiprows=1)
+```
+
+---
+
+## 4. JSON
+
+```python
 import json
 
-# From a JSON file
+# From a JSON file (simple/flat structure)
 df = pd.read_json('data.json')
 
 # Nested JSON -> flatten
@@ -58,10 +88,9 @@ df = pd.json_normalize(raw, record_path=['key_to_records'])
 
 ---
 
-## 📂 3. Reading from SQL Databases
+## 5. SQL Databases
 
 ```python
-import pandas as pd
 import sqlite3
 # or: from sqlalchemy import create_engine
 
@@ -76,16 +105,81 @@ df = pd.read_sql('SELECT * FROM table_name', conn)
 
 ---
 
-## 📂 4. Fetching Data from an API
+# 📤 Part 2: Exporting Data into Different Formats
+
+Once data is loaded, cleaned, or transformed, it's often useful to export it back into different formats for sharing, storage, or further use.
+
+## 1. CSV
+
+```python
+df.to_csv('output.csv', index=False)
+```
+
+## 2. Excel
+
+```python
+df.to_excel('output.xlsx', sheet_name='Sheet1', index=False)
+
+# Writing multiple DataFrames to multiple sheets
+with pd.ExcelWriter('output.xlsx') as writer:
+    df1.to_excel(writer, sheet_name='Sheet1', index=False)
+    df2.to_excel(writer, sheet_name='Sheet2', index=False)
+```
+
+## 3. JSON
+
+```python
+df.to_json('output.json', orient='records', indent=2)
+```
+
+## 4. HTML
+
+```python
+df.to_html('output.html', index=False)
+```
+
+## 5. SQL
+
+```python
+df.to_sql('table_name', conn, if_exists='replace', index=False)
+```
+
+---
+
+# 🌐 Part 3: Gathering Data via API
 
 ```python
 import requests
-import pandas as pd
 
 response = requests.get('https://api.example.com/data')
 data = response.json()
 
 df = pd.json_normalize(data)
+```
+
+### Handling Pagination
+```python
+all_data = []
+url = 'https://api.example.com/data'
+params = {'page': 1, 'per_page': 100}
+
+while True:
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    if not data['results']:
+        break
+
+    all_data.extend(data['results'])
+    params['page'] += 1
+
+df = pd.json_normalize(all_data)
+```
+
+### Authentication
+```python
+headers = {'Authorization': 'Bearer YOUR_API_KEY'}
+response = requests.get('https://api.example.com/data', headers=headers)
 ```
 
 **Things to document:**
@@ -95,12 +189,10 @@ df = pd.json_normalize(data)
 
 ---
 
-## 📂 5. Web Scraping to DataFrame
+# 🕸️ Part 4: Web Scraping to DataFrame
 
 ```python
-import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
 url = 'https://example.com/table-page'
 response = requests.get(url)
@@ -111,6 +203,19 @@ tables = pd.read_html(response.text)
 df = tables[0]
 ```
 
+### Scraping Specific Elements (when not in a `<table>`)
+```python
+items = soup.find_all('div', class_='item')
+
+rows = []
+for item in items:
+    name = item.find('h2').text.strip()
+    price = item.find('span', class_='price').text.strip()
+    rows.append({'name': name, 'price': price})
+
+df = pd.DataFrame(rows)
+```
+
 **Things to document:**
 - Source URL and date scraped
 - robots.txt / terms of use check
@@ -118,35 +223,14 @@ df = tables[0]
 
 ---
 
-## 📂 6. Reading Excel and Other Formats via `pandas.io`
-
-```python
-# Excel
-df = pd.read_excel('data.xlsx', sheet_name='Sheet1')
-
-# Multiple sheets
-all_sheets = pd.read_excel('data.xlsx', sheet_name=None)  # dict of DataFrames
-
-# Parquet
-df = pd.read_parquet('data.parquet')
-
-# HTML tables
-df_list = pd.read_html('https://example.com/page')
-
-# Clipboard (quick paste-in)
-df = pd.read_clipboard()
-```
-
----
-
-## 🗂️ Documenting Each Data Source
+# 🗂️ Documenting Each Data Source
 
 For every dataset gathered, record:
 
 | Field | Details |
 |---|---|
 | **Source name** | |
-| **Source type** | CSV / JSON / SQL / API / Web scrape / Excel |
+| **Source type** | CSV / TXT / HTML / Excel / JSON / SQL / API / Web scrape |
 | **URL / Path** | |
 | **Date accessed** | |
 | **Access method / credentials needed** | |
@@ -155,7 +239,7 @@ For every dataset gathered, record:
 
 ---
 
-## 💾 Saving Raw Data
+# 💾 Saving Raw Data
 
 Always save an untouched copy of the gathered data before moving to assessment/cleaning:
 
