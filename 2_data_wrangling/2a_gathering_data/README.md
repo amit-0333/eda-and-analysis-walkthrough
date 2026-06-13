@@ -221,23 +221,7 @@ df = pd.DataFrame(rows)
 - robots.txt / terms of use check
 - Structure of the HTML being parsed (in case site changes)
 
----
 
-# 🗂️ Documenting Each Data Source
-
-For every dataset gathered, record:
-
-| Field | Details |
-|---|---|
-| **Source name** | |
-| **Source type** | CSV / TXT / HTML / Excel / JSON / SQL / API / Web scrape |
-| **URL / Path** | |
-| **Date accessed** | |
-| **Access method / credentials needed** | |
-| **Rows x Columns (raw)** | |
-| **Known issues at this stage** | |
-
----
 
 # 💾 Saving Raw Data
 
